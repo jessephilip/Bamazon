@@ -4,7 +4,8 @@ var inquirer = require("inquirer");
 var Table = require("cli-table");
 
 // Global Variable
-var tableHeader = ["ID", "Product", "Department", "Price", "Quantity"];
+// show ids, names, and prices
+var tableHeader = ["ID", "Product", "Price"];
 
 // import password for connection
 var password = require("./keys.js");
@@ -19,10 +20,19 @@ var connection = mysql.createConnection({
 
 function getAll() {
     connection.query("SELECT * FROM products", function (error, result) {
+        var list = [];
         if (error) throw error;
-        console.log("result", result);
         createTable(tableHeader, result);
-        endConnection();
+        for (var i = 0; i < result.length; i++) {
+            list.push([
+                result[i].item_id,
+                result[i].product_name,
+                result[i].department_name,
+                result[i].price,
+                result[i].stock_quantity
+            ]);
+        }
+        whichItem(list);
     });
 }
 
@@ -31,10 +41,7 @@ function endConnection() {
 }
 
 function createTable(headArray, inputArray) {
-    var colWidthArray = [];
-    for (var i = 0; i < tableHeader.length; i++) {
-        colWidthArray.push(20);
-    }
+    var colWidthArray = [10, 50, 20];
 
     var table = new Table({
         head: headArray,
@@ -45,13 +52,79 @@ function createTable(headArray, inputArray) {
         table.push([
             inputArray[i].item_id,
             inputArray[i].product_name,
-            inputArray[i].department_name,
-            inputArray[i].price,
-            inputArray[i].stock_quantity
+            inputArray[i].price
         ]);
     }
 
     console.log(table.toString());
 }
 
+function whichItem(list) {
+    inquirer.prompt([{
+        type: "input",
+        name: "item",
+        message: "Which item would you like to purchase? Type its ID number to select it.",
+        validate: function (string) {
+            var test = parseInt(string);
+            if (isNaN(test)) return false;
+            else return true;
+        }
+    }]).then(function (itemId) {
+        var chosenItem = [];
+        for (var i = 0; i < list.length; i++) {
+            if (list[i][0] == itemId.item) chosenItem = list[i];
+        }
+        howManyToBuy(chosenItem);
+    });
+}
+
+function howManyToBuy(chosenItem) {
+    var name = chosenItem[1];
+    var price = chosenItem[3];
+    var totalQuantity = chosenItem[4];
+
+    inquirer.prompt([{
+        type: "input",
+        name: "amount",
+        message: "How many " + name + "s would you like to buy?",
+        validate: function (string) {
+            var test = parseInt(string);
+            if (isNaN(test)) return false;
+            else return true;
+        }
+    }]).then(function (amountData) {
+        var amount = price * amountData.amount;
+        if (parseInt(amountData.amount) > totalQuantity) {
+            console.log("We do not have that many " + name + "s in stock.");
+            endConnection();
+        } else {
+            var remaining = totalQuantity - parseInt(amountData.amount);
+            updateQuantity(chosenItem, remaining);
+            console.log("OK. The total is " + amount + ". Thank you for your wheelage.");
+        }
+    });
+}
+
+function getQuantity(id) {
+    connection.query("SELECT stock_quantity FROM products WHERE item_id = " + id, function (error, result) {
+        return result;
+    });
+}
+
+function getItemName(id) {
+    connection.query("SELECT product_name FROM products WHERE item_id = " + id, function (error, result) {
+        return result;
+    });
+}
+
+function updateQuantity(item, number) {
+    var id = parseInt(item[0]);
+    number = parseInt(number);
+    connection.query("UPDATE products SET stock_quantity = " + number + " WHERE item_id = " + id + ";", function (error, result) {
+        if (error) throw error;
+        endConnection();
+    });
+}
+
+// startup code
 getAll();
