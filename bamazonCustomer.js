@@ -3,10 +3,6 @@ var mysql = require("mysql");
 var inquirer = require("inquirer");
 var Table = require("cli-table");
 
-// Global Variable
-// show ids, names, and prices
-var tableHeader = ["ID", "Product", "Price"];
-
 // import password for connection
 var password = require("./keys.js");
 
@@ -17,6 +13,10 @@ var connection = mysql.createConnection({
     password: password.password,
     database: 'bamazon'
 });
+
+// show ids, names, and prices
+var tableHeader = ["ID", "Product", "Price"];
+var colWidthArray = [10, 50, 20];
 
 function getAll() {
     connection.query("SELECT * FROM products", function (error, result) {
@@ -41,7 +41,6 @@ function endConnection() {
 }
 
 function createTable(headArray, inputArray) {
-    var colWidthArray = [10, 50, 20];
 
     var table = new Table({
         head: headArray,
