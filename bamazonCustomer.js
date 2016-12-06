@@ -99,6 +99,7 @@ function howManyToBuy(chosenItem) {
         } else {
             var remaining = totalQuantity - parseInt(amountData.amount);
             updateQuantity(chosenItem, remaining);
+            updateSales(chosenItem, parseInt(amountData.amount));
             console.log("OK. The total is " + amount + ". Thank you for your wheelage.");
         }
     });
@@ -121,7 +122,26 @@ function updateQuantity(item, number) {
     number = parseInt(number);
     connection.query("UPDATE products SET stock_quantity = " + number + " WHERE item_id = " + id + ";", function (error, result) {
         if (error) throw error;
-        endConnection();
+    });
+}
+
+function updateSales(itemObject, sold) {
+    var id = itemObject[0];
+    connection.query("SELECT department_name FROM products WHERE item_id = " + id + ";", function (error, idResults) {
+        var department = '"' + idResults[0].department_name + '"';
+
+        connection.query("SELECT total_sales FROM departments WHERE department_name = " + department, function (error, salesResults) {
+            var currentSales = salesResults[0].total_sales;
+            var amount = (sold * itemObject[3]) + currentSales;
+
+            connection.query("UPDATE departments SET total_sales = " + amount + " WHERE department_name = " + department + ";", function (error, departmentResults) {
+                if (error) throw error;
+                endConnection();
+            });
+        });
+
+
+
     });
 }
 
