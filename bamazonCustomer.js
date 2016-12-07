@@ -139,9 +139,6 @@ function updateSales(itemObject, sold) {
                 endConnection();
             });
         });
-
-
-
     });
 }
 
